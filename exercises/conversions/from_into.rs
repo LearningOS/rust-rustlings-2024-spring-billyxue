@@ -40,12 +40,78 @@ impl Default for Person {
 // If while parsing the age, something goes wrong, then return the default of
 // Person Otherwise, then return an instantiated Person object with the results
 
-// I AM NOT DONE
+
+use std::num::ParseIntError;
+use std::str::FromStr;
+
+#[derive(Debug,PartialEq)]
+enum ParsePersonError {
+    Empty,
+    BadLen,
+    NoName,
+    ParseInt(ParseIntError),
+}
+use std::fmt;
+
+impl fmt::Display for ParsePersonError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ParsePersonError::Empty => write!(f, "Empty string"),
+            ParsePersonError::NoName => write!(f, "Name is missing"),
+            ParsePersonError::BadLen=> write!(f, "Invalid age"),
+            ParsePersonError::ParseInt(err)=> write!(f, "Invalid format"),
+        }
+    }
+}
+
+fn parse_age(age_str: &str) -> Result<usize, ParsePersonError> {
+    if age_str.contains(',') {
+        Err(ParsePersonError::BadLen)
+    } else {
+        match age_str.parse() {
+            Ok(age) => Ok(age),
+            Err(err) => Err(ParsePersonError::ParseInt(err)),
+        }
+    }
+}
+
+impl std::error::Error for ParsePersonError {}
+
+impl FromStr  for Person {
+	type Err = ParsePersonError;
+
+    fn from_str(s: &str) -> Result<Person, Self::Err> {
+        if s.is_empty() {
+            return Ok(Person::default());
+            //Err(ParsePersonError::Empty)
+        } else if let Some((name, age)) = s.split_once(",") {
+            if name.is_empty() {
+                return Ok(Person::default());
+            } else {
+                match age.parse::<usize>() {
+                    Ok(agenum) => { return Ok(Person {
+                        name: String::from(name),
+                        age: agenum, } );
+                        },
+                    _ => { return Ok(Person::default()); }
+                }
+            }
+        } else {
+            return Ok(Person::default());
+            //Err(ParsePersonError::BadLen)
+        }
+    }
+}
 
 impl From<&str> for Person {
     fn from(s: &str) -> Person {
+        match Person::from_str(s) {
+            Ok(person) => person,
+            Err(err) => panic!("Failed to create Person: {}", err),
+        }
     }
 }
+
 
 fn main() {
     // Use the `from` function
